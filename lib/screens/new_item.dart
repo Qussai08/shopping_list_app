@@ -18,10 +18,14 @@ class _NewItemState extends State<NewItem> {
   var _enteredName = '';
   var _enteredQuantity = 1;
   var _selectedCategory = categories[Categories.vegetables]!;
+  var _isSending = false;
 
   _saveItem() async {
     _formKey.currentState!.validate();
     _formKey.currentState!.save();
+    setState(() {
+      _isSending = true;
+    });
     final url = Uri.https('shopping-list-app-15ab3-default-rtdb.firebaseio.com',
         'shopping-list.json');
     final response = await http.post(
@@ -43,11 +47,13 @@ class _NewItemState extends State<NewItem> {
     if (!context.mounted) {
       return;
     }
-    Navigator.of(context).pop(GroceryItem(
-        id: responseData['name'],
-        name: _enteredName,
-        quantity: _enteredQuantity,
-        category: _selectedCategory));
+    Navigator.of(context).pop(
+      GroceryItem(
+          id: responseData['name'],
+          name: _enteredName,
+          quantity: _enteredQuantity,
+          category: _selectedCategory),
+    );
   }
 
   _reset() {
@@ -138,9 +144,18 @@ class _NewItemState extends State<NewItem> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(onPressed: _reset, child: const Text('Reset')),
+                  TextButton(
+                      onPressed: _isSending ? null : _reset,
+                      child: const Text('Reset')),
                   ElevatedButton(
-                      onPressed: _saveItem, child: const Text('Add item')),
+                      onPressed: _isSending ? null : _saveItem,
+                      child: _isSending
+                          ? const SizedBox(
+                              width: 16.0,
+                              height: 16.0,
+                              child: CircularProgressIndicator(),
+                            )
+                          : const Text('Add item')),
                 ],
               ),
             ],

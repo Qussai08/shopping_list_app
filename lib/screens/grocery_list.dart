@@ -4,8 +4,6 @@ import 'package:http/http.dart' as http;
 
 import 'package:flutter/material.dart';
 import 'package:shopping_list_app/data/categories.dart';
-import 'package:shopping_list_app/data/dummy_items.dart';
-import 'package:shopping_list_app/models/category.dart';
 import 'package:shopping_list_app/models/grocery_item.dart';
 import 'package:shopping_list_app/screens/new_item.dart';
 
@@ -18,6 +16,7 @@ class GroceryList extends StatefulWidget {
 
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
+  var _isLoading = true;
 
   @override
   void initState() {
@@ -45,19 +44,22 @@ class _GroceryListState extends State<GroceryList> {
     }
     setState(() {
       _groceryItems = loadedItems;
+      _isLoading = false;
     });
   }
 
   void _addItem() async {
-    final newItem = await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (ctx) => NewItem()));
+    final newItem =
+        await Navigator.of(context).push<GroceryItem>(MaterialPageRoute(
+      builder: (ctx) => const NewItem(),
+    ));
 
     if (newItem == null) {
       return;
     }
 
     setState(() {
-      groceryItems.add(newItem);
+      _groceryItems.add(newItem);
     });
   }
 
@@ -69,35 +71,45 @@ class _GroceryListState extends State<GroceryList> {
 
   @override
   Widget build(BuildContext context) {
+    Widget content = Center(
+      child: Text(
+        'You didn\'t add items to your grocery list yet.',
+        style: Theme.of(context)
+            .textTheme
+            .bodyLarge!
+            .copyWith(color: Theme.of(context).colorScheme.onBackground),
+      ),
+    );
+
+    if (_isLoading) {
+      content = const Center(child: CircularProgressIndicator());
+    }
+
+    if (_groceryItems.isNotEmpty) {
+      content = ListView.builder(
+          itemCount: _groceryItems.length,
+          itemBuilder: (context, index) => Dismissible(
+                key: ValueKey(_groceryItems[index].id),
+                onDismissed: (direction) {
+                  _removeItem(_groceryItems[index]);
+                },
+                child: ListTile(
+                  title: Text(_groceryItems[index].name),
+                  leading: Container(
+                      height: 20.0,
+                      width: 20.0,
+                      color: _groceryItems[index].category.color),
+                  trailing: Text('${_groceryItems[index].quantity}'),
+                ),
+              ));
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Groceries'),
         actions: [IconButton(onPressed: _addItem, icon: Icon(Icons.add))],
       ),
-      body: _groceryItems.length == 0
-          ? Center(
-              child: Text(
-                'You didn\'t add items to your grocery list yet.',
-                style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                    color: Theme.of(context).colorScheme.onBackground),
-              ),
-            )
-          : ListView.builder(
-              itemCount: _groceryItems.length,
-              itemBuilder: (context, index) => Dismissible(
-                    key: ValueKey(_groceryItems[index].id),
-                    onDismissed: (direction) {
-                      _removeItem(_groceryItems[index]);
-                    },
-                    child: ListTile(
-                      title: Text(_groceryItems[index].name),
-                      leading: Container(
-                          height: 20.0,
-                          width: 20.0,
-                          color: _groceryItems[index].category.color),
-                      trailing: Text('${_groceryItems[index].quantity}'),
-                    ),
-                  )),
+      body: content,
     );
   }
 }
